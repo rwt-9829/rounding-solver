@@ -92,6 +92,7 @@ pub fn game_init(
     add_allin_threshold: f64,
     force_allin_threshold: f64,
     merging_threshold: f64,
+    rounding_step_percent: u8,
     added_lines: String,
     removed_lines: String,
 ) -> Option<String> {
@@ -168,6 +169,9 @@ pub fn game_init(
     }
 
     let mut game = game_state.lock().unwrap();
+    if let Err(err) = game.set_rounding_step_percent(rounding_step_percent) {
+        return Some(err);
+    }
     game.update_config(card_config, action_tree).err()
 }
 
@@ -221,9 +225,11 @@ pub fn game_solve_step(
     pool_state: tauri::State<Mutex<ThreadPool>>,
     current_iteration: u32,
 ) {
-    let game = game_state.lock().unwrap();
     let pool = pool_state.lock().unwrap();
-    pool.install(|| solve_step(&*game, current_iteration));
+    pool.install(|| {
+        let mut game = game_state.lock().unwrap();
+        solve_step_rounding(&mut *game, current_iteration);
+    });
 }
 
 #[tauri::command(async)]

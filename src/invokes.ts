@@ -205,6 +205,7 @@ export const gameInit = async (
   addAllinThreshold: number,
   forceAllinThreshold: number,
   mergingThreshold: number,
+  roundingStepPercent: number,
   addedLines: string,
   removedLines: string
 ): Promise<string | null> => {
@@ -232,6 +233,7 @@ export const gameInit = async (
     addAllinThreshold,
     forceAllinThreshold,
     mergingThreshold,
+    roundingStepPercent,
     addedLines,
     removedLines,
   });

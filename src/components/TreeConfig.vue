@@ -79,6 +79,26 @@
                 :max="3 * MAX_AMOUNT"
               />
             </div>
+
+            <div class="my-1">
+              <span class="inline-block w-[7.5rem]">Rounding step:</span>
+              <select
+                v-model="config.roundingStepPercent"
+                :class="
+                  'w-24 px-2 py-1 rounded-lg text-sm text-center ' +
+                  (!isRoundingStepValid ? 'input-error' : '')
+                "
+                :disabled="hasEdit"
+              >
+                <option
+                  v-for="step in roundingStepOptions"
+                  :key="step"
+                  :value="step"
+                >
+                  {{ step }}%
+                </option>
+              </select>
+            </div>
           </div>
 
           <div class="ml-auto p-1">
@@ -779,6 +799,7 @@ type ConfigValue = {
   addAllInThreshold: number;
   forceAllInThreshold: number;
   mergingThreshold: number;
+  roundingStepPercent: number;
   expectedBoardLength: number;
   addedLines: string;
   removedLines: string;
@@ -786,6 +807,11 @@ type ConfigValue = {
 
 const store = useStore();
 const config = useConfigStore();
+
+const roundingStepOptions = [1, 2, 4, 5, 10, 20, 25, 50, 100];
+const isRoundingStepValid = computed(() =>
+  roundingStepOptions.includes(config.roundingStepPercent)
+);
 
 const isEditMode = ref(false);
 
@@ -836,6 +862,9 @@ const errorBasics = computed(() => {
   }
   if (config.rakeCap > 3 * MAX_AMOUNT) {
     errors.push(`Rake cap must not exceed ${3 * MAX_AMOUNT}`);
+  }
+  if (!isRoundingStepValid.value) {
+    errors.push("Rounding step must be a factor of 100");
   }
   return errors;
 });
@@ -958,6 +987,7 @@ const clearConfig = () => {
   config.addAllInThreshold = 0;
   config.forceAllInThreshold = 0;
   config.mergingThreshold = 0;
+  config.roundingStepPercent = 25;
   config.expectedBoardLength = 0;
   config.addedLines = "";
   config.removedLines = "";
@@ -1005,6 +1035,7 @@ const dbValue = computed(
     addAllInThreshold: config.addAllInThreshold,
     forceAllInThreshold: config.forceAllInThreshold,
     mergingThreshold: config.mergingThreshold,
+    roundingStepPercent: config.roundingStepPercent,
     expectedBoardLength: config.expectedBoardLength,
     addedLines: config.addedLines,
     removedLines: config.removedLines,
@@ -1021,6 +1052,7 @@ const loadConfig = (value: unknown) => {
   config.addAllInThreshold = Number(configValue.addAllInThreshold);
   config.forceAllInThreshold = Number(configValue.forceAllInThreshold);
   config.mergingThreshold = Number(configValue.mergingThreshold);
+  config.roundingStepPercent = Number(configValue.roundingStepPercent ?? 25);
   config.expectedBoardLength = Number(configValue.expectedBoardLength);
   config.addedLines = String(configValue.addedLines);
   config.removedLines = String(configValue.removedLines);

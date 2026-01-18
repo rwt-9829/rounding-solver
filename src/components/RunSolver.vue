@@ -335,6 +335,8 @@ import * as invokes from "../invokes";
 import { Tippy } from "vue-tippy";
 import { QuestionMarkCircleIcon } from "@heroicons/vue/20/solid";
 
+const validRoundingSteps = [1, 2, 4, 5, 10, 20, 25, 50, 100];
+
 const checkConfig = (
   config: ReturnType<typeof useConfigStore>
 ): string | null => {
@@ -406,6 +408,13 @@ const checkConfig = (
 
   if (config.mergingThreshold < 0) {
     return "Invalid merging threshold";
+  }
+
+  if (
+    config.roundingStepPercent % 1 !== 0 ||
+    !validRoundingSteps.includes(config.roundingStepPercent)
+  ) {
+    return "Invalid rounding step size";
   }
 
   if (
@@ -580,6 +589,7 @@ const buildTree = async () => {
     tmpConfig.addAllInThreshold / 100,
     tmpConfig.forceAllInThreshold / 100,
     tmpConfig.mergingThreshold / 100,
+    tmpConfig.roundingStepPercent,
     tmpConfig.addedLines,
     tmpConfig.removedLines
   );
