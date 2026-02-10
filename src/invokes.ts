@@ -206,6 +206,7 @@ export const gameInit = async (
   forceAllinThreshold: number,
   mergingThreshold: number,
   roundingStepPercent: number,
+  roundingFrequency: number,
   addedLines: string,
   removedLines: string
 ): Promise<string | null> => {
@@ -234,6 +235,7 @@ export const gameInit = async (
     forceAllinThreshold,
     mergingThreshold,
     roundingStepPercent,
+    roundingFrequency,
     addedLines,
     removedLines,
   });
@@ -263,12 +265,28 @@ export const gameSolveStep = async (currentIteration: number) => {
   await invoke("game_solve_step", { currentIteration });
 };
 
+export const gameSolveUntilRounded = async (
+  startIteration: number,
+  maxNumIterations: number,
+  targetExploitability: number
+): Promise<[number, number, boolean]> => {
+  return (await invoke("game_solve_until_rounded", {
+    startIteration,
+    maxNumIterations,
+    targetExploitability,
+  })) as [number, number, boolean];
+};
+
+export const gameTryAbortFinalize = async (): Promise<boolean> => {
+  return (await invoke("game_try_abort_finalize")) as boolean;
+};
+
 export const gameExploitability = async (): Promise<number> => {
   return await invoke("game_exploitability");
 };
 
-export const gameFinalize = async () => {
-  await invoke("game_finalize");
+export const gameFinalize = async (): Promise<number> => {
+  return (await invoke("game_finalize")) as number;
 };
 
 export const gameApplyHistory = async (history: number[]) => {

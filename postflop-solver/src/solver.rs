@@ -137,7 +137,11 @@ pub fn solve_step<T: Game>(game: &T, current_iteration: u32) {
 #[inline]
 pub fn solve_step_rounding(game: &mut PostFlopGame, current_iteration: u32) {
     solve_step(game, current_iteration);
-    game.round_strategies_in_place();
+    // Only apply rounding on the configured frequency.
+    let freq = game.rounding_frequency();
+    if freq == 0 || (current_iteration + 1) % freq == 0 {
+        game.round_strategies_in_place();
+    }
 }
 
 /// Recursively solves the counterfactual values.

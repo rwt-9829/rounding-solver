@@ -40,6 +40,9 @@ pub struct PostFlopGame {
     tree_config: TreeConfig,
     // Rounding step size in percent (1..=100, must divide 100). 0 disables rounding.
     rounding_step_percent: u8,
+    // Frequency of rounding (apply rounding every `rounding_frequency` iterations).
+    // Must be >= 1. Default = 1 (round every iteration when enabled).
+    rounding_frequency: u32,
     added_lines: Vec<Vec<Action>>,
     removed_lines: Vec<Vec<Action>>,
     action_root: Box<MutexLike<ActionTreeNode>>,

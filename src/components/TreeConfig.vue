@@ -99,6 +99,19 @@
                 </option>
               </select>
             </div>
+            <div class="my-1">
+              <span class="inline-block w-[7.5rem]">Round every N:</span>
+              <input
+                v-model="config.roundingFrequency"
+                type="number"
+                min="1"
+                :class="
+                  'w-24 px-2 py-1 rounded-lg text-sm text-center ' +
+                  (config.roundingFrequency < 1 ? 'input-error' : '')
+                "
+                :disabled="hasEdit"
+              />
+            </div>
           </div>
 
           <div class="ml-auto p-1">
@@ -800,6 +813,7 @@ type ConfigValue = {
   forceAllInThreshold: number;
   mergingThreshold: number;
   roundingStepPercent: number;
+  roundingFrequency: number;
   expectedBoardLength: number;
   addedLines: string;
   removedLines: string;
@@ -865,6 +879,9 @@ const errorBasics = computed(() => {
   }
   if (!isRoundingStepValid.value) {
     errors.push("Rounding step must be a factor of 100");
+  }
+  if (config.roundingFrequency < 1) {
+    errors.push("Rounding frequency must be >= 1");
   }
   return errors;
 });
@@ -988,6 +1005,7 @@ const clearConfig = () => {
   config.forceAllInThreshold = 0;
   config.mergingThreshold = 0;
   config.roundingStepPercent = 25;
+  config.roundingFrequency = 1;
   config.expectedBoardLength = 0;
   config.addedLines = "";
   config.removedLines = "";
@@ -1036,6 +1054,7 @@ const dbValue = computed(
     forceAllInThreshold: config.forceAllInThreshold,
     mergingThreshold: config.mergingThreshold,
     roundingStepPercent: config.roundingStepPercent,
+    roundingFrequency: config.roundingFrequency,
     expectedBoardLength: config.expectedBoardLength,
     addedLines: config.addedLines,
     removedLines: config.removedLines,
@@ -1053,6 +1072,7 @@ const loadConfig = (value: unknown) => {
   config.forceAllInThreshold = Number(configValue.forceAllInThreshold);
   config.mergingThreshold = Number(configValue.mergingThreshold);
   config.roundingStepPercent = Number(configValue.roundingStepPercent ?? 25);
+  config.roundingFrequency = Number(configValue.roundingFrequency ?? 1);
   config.expectedBoardLength = Number(configValue.expectedBoardLength);
   config.addedLines = String(configValue.addedLines);
   config.removedLines = String(configValue.removedLines);

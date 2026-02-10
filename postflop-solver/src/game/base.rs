@@ -127,7 +127,9 @@ impl PostFlopGame {
     /// [`with_config`]: #method.with_config
     #[inline]
     pub fn new() -> Self {
-        Self::default()
+        let mut s = Self::default();
+        s.rounding_frequency = 1;
+        s
     }
 
     /// Creates a new [`PostFlopGame`] with the specified configuration.
@@ -190,6 +192,23 @@ impl PostFlopGame {
 
         self.rounding_step_percent = step_percent;
         Ok(())
+    }
+
+    /// Sets the rounding frequency: apply rounding every `freq` iterations.
+    /// `freq` must be >= 1. A value of 1 means round every iteration.
+    #[inline]
+    pub fn set_rounding_frequency(&mut self, freq: u32) -> Result<(), String> {
+        if freq == 0 {
+            return Err("Rounding frequency must be >= 1".to_string());
+        }
+        self.rounding_frequency = freq;
+        Ok(())
+    }
+
+    /// Returns the configured rounding frequency.
+    #[inline]
+    pub fn rounding_frequency(&self) -> u32 {
+        self.rounding_frequency
     }
 
     /// Rounds all stored strategies to the configured step size.

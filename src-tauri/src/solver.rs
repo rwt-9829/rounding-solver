@@ -93,6 +93,7 @@ pub fn game_init(
     force_allin_threshold: f64,
     merging_threshold: f64,
     rounding_step_percent: u8,
+    rounding_frequency: u32,
     added_lines: String,
     removed_lines: String,
 ) -> Option<String> {
@@ -172,6 +173,9 @@ pub fn game_init(
     if let Err(err) = game.set_rounding_step_percent(rounding_step_percent) {
         return Some(err);
     }
+    if let Err(err) = game.set_rounding_frequency(rounding_frequency) {
+        return Some(err);
+    }
     game.update_config(card_config, action_tree).err()
 }
 
@@ -233,6 +237,60 @@ pub fn game_solve_step(
 }
 
 #[tauri::command(async)]
+pub fn game_solve_until_rounded(
+    game_state: tauri::State<Mutex<PostFlopGame>>,
+    pool_state: tauri::State<Mutex<ThreadPool>>,
+    start_iteration: u32,
+    max_num_iterations: u32,
+    target_exploitability: f32,
+)
+    -> (u32, f32, bool) {
+    let pool = pool_state.lock().unwrap();
+    pool.install(|| {
+        let mut game = game_state.lock().unwrap();
+        let freq = game.rounding_frequency();
+
+        let mut exploitability = compute_exploitability(&*game);
+
+        for t in start_iteration..max_num_iterations {
+            if exploitability <= target_exploitability {
+                break;
+            }
+
+            // perform one iteration
+            solve_step(&*game, t);
+
+            // apply rounding on schedule
+            if freq == 0 || (t + 1) % freq == 0 {
+                game.round_strategies_in_place();
+                exploitability = compute_exploitability(&*game);
+                if exploitability <= target_exploitability {
+                    // finalize using the existing guard
+                    finalize(&mut *game);
+                    return (t + 1, exploitability, true);
+                }
+            }
+        }
+
+        // ensure we end on a rounding
+        let last_iter = max_num_iterations;
+        if freq == 0 || last_iter % freq != 0 {
+            game.round_strategies_in_place();
+        }
+
+        exploitability = compute_exploitability(&*game);
+        // only finalize if rounded exploitability satisfies the target
+        if exploitability <= target_exploitability {
+            finalize(&mut *game);
+            (last_iter, exploitability, true)
+        } else {
+            // do not finalize; caller must decide next steps
+            (last_iter, exploitability, false)
+        }
+    })
+}
+
+#[tauri::command(async)]
 pub fn game_exploitability(
     game_state: tauri::State<Mutex<PostFlopGame>>,
     pool_state: tauri::State<Mutex<ThreadPool>>,
@@ -242,13 +300,34 @@ pub fn game_exploitability(
     pool.install(|| compute_exploitability(&*game))
 }
 
+#[tauri::command]
+pub fn game_try_abort_finalize(game_state: tauri::State<Mutex<PostFlopGame>>) -> bool {
+    // try to acquire the lock without blocking; if we can, mark the game as solved
+    // so the frontend can recover. If the lock is held (finalize in progress), return false.
+    match game_state.try_lock() {
+        Ok(mut game) => {
+            game.set_solved();
+            true
+        }
+        Err(_) => false,
+    }
+}
+
 #[tauri::command(async)]
 pub fn game_finalize(
     game_state: tauri::State<Mutex<PostFlopGame>>,
     pool_state: tauri::State<Mutex<ThreadPool>>,
-) {
+) -> f32 {
     let pool = pool_state.lock().unwrap();
-    pool.install(|| finalize(&mut *game_state.lock().unwrap()));
+    pool.install(|| {
+        let mut game = game_state.lock().unwrap();
+        // finish current iteration: apply final rounding and compute exploitability,
+        // then finalize using the same lock (avoid double-locking the mutex).
+        game.round_strategies_in_place();
+        let e = compute_exploitability(&*game);
+        finalize(&mut *game);
+        e
+    })
 }
 
 #[tauri::command]

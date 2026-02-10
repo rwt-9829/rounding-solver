@@ -50,6 +50,7 @@ export type ConfigValue2 = {
 
 export type ConfigValue3 = ConfigValue2 & {
   roundingStepPercent: number;
+  roundingFrequency: number;
 };
 
 const migrateBetString1to2 = (str: string, isRaise: boolean) => {
@@ -91,5 +92,6 @@ export const migrateConfig2to3 = (value: ConfigValue2): ConfigValue3 => {
   return {
     ...value,
     roundingStepPercent: 25,
+    roundingFrequency: 1,
   };
 };

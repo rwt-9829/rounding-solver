@@ -483,6 +483,8 @@ const pauseFlag = ref(false);
 const currentIteration = ref(-1);
 const exploitability = ref(Number.POSITIVE_INFINITY);
 const elapsedTimeMs = ref(-1);
+const finalizingCountdownSeconds = ref(60);
+let finalizingTimer: number | null = null;
 
 let startTime = 0;
 let exploitabilityUpdated = false;
@@ -590,6 +592,7 @@ const buildTree = async () => {
     tmpConfig.forceAllInThreshold / 100,
     tmpConfig.mergingThreshold / 100,
     tmpConfig.roundingStepPercent,
+    tmpConfig.roundingFrequency,
     tmpConfig.addedLines,
     tmpConfig.removedLines
   );
@@ -695,12 +698,10 @@ const resumeSolver = async () => {
     ++currentIteration.value;
     exploitabilityUpdated = false;
 
-    if (currentIteration.value % 10 === 0) {
-      exploitability.value = Math.max(await invokes.gameExploitability(), 0);
-      exploitabilityUpdated = true;
-    }
+    // show exploitability after every iteration
+    exploitability.value = Math.max(await invokes.gameExploitability(), 0);
+    exploitabilityUpdated = true;
   }
-
   if (!exploitabilityUpdated) {
     exploitability.value = Math.max(await invokes.gameExploitability(), 0);
   }
@@ -708,7 +709,39 @@ const resumeSolver = async () => {
   store.isSolverRunning = false;
   store.isFinalizing = true;
 
-  await invokes.gameFinalize();
+  // start finalizing countdown
+  finalizingCountdownSeconds.value = 60;
+  if (finalizingTimer) {
+    clearInterval(finalizingTimer as any);
+  }
+  finalizingTimer = setInterval(() => {
+    finalizingCountdownSeconds.value -= 1;
+  }, 1000) as unknown as number;
+
+  // Always ensure we end on a rounded strategy satisfying the target.
+  const [finalIter, finalExpl, finalized] = await invokes.gameSolveUntilRounded(
+    currentIteration.value,
+    maxIterations.value,
+    target
+  );
+
+  currentIteration.value = finalIter;
+  exploitability.value = Math.max(finalExpl, 0);
+  exploitabilityUpdated = true;
+
+  if (!finalized) {
+    // rounded exploitability did not meet the target; show error and keep state
+    solverErrorText.value =
+      "Rounded exploitability did not reach the target before max iterations.";
+    store.isSolverError = true;
+  }
+
+  // stop finalizing countdown
+  if (finalizingTimer) {
+    clearInterval(finalizingTimer as any);
+    finalizingTimer = null;
+  }
+  finalizingCountdownSeconds.value = 60;
 
   store.isFinalizing = false;
   store.isSolverFinished = true;
